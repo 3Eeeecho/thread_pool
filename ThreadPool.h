@@ -14,20 +14,21 @@ public:
 
 private:
 	//工作线程函数
+
+	//线程销毁
+	void threadExit();
+
 	//取出队列中任务并执行
 	static void worker();
 
 	//管理线程
 	static void manger();
 
-	//线程销毁
-	void threadExit();
-
 private:
 	std::mutex m_mutex;
 	std::condition_variable cond;
-	std::thread* m_threadIds;
-	std::thread m_managerId;
+	std::vector<std::thread*> m_threadIds;
+	std::thread m_mangerId;
 	TaskQueue* m_taskQueue;
 
 	//线程池参数设置
