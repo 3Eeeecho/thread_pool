@@ -19,7 +19,7 @@ private:
 	void threadExit();
 
 	//取出队列中任务并执行
-	static void worker();
+	static void worker(void* arg);
 
 	//管理线程
 	static void manger();

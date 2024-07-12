@@ -1,6 +1,7 @@
 #include "ThreadPool.h"
 
 #include <iostream>
+#include <format>
 #include <threads.h>
 
 ThreadPool::ThreadPool(int min, int max)
@@ -19,13 +20,13 @@ ThreadPool::ThreadPool(int min, int max)
 
 		//初始化线程组
 		m_threadIds.resize(m_minThreads);
-		if(m_threadIds.empty())
+		if (m_threadIds.empty())
 		{
 			std::cerr << "vector thread failed!" << std::endl;
 			break;
 		}
 
-		for(int i=0;i<m_minThreads;++i)
+		for (int i = 0; i < m_minThreads; ++i)
 		{
 			m_threadIds[i] = new std::thread(worker);
 			std::cout << "create thread ID: " << m_threadIds[i]->get_id() << std::endl;
@@ -33,25 +34,25 @@ ThreadPool::ThreadPool(int min, int max)
 
 		m_mangerId = std::thread(manger);
 		std::cout << "create Mangerthread ID: " << m_mangerId.get_id() << std::endl;
-
 	}
-	while (0);
-
+	while (false);
 }
 
 ThreadPool::~ThreadPool()
 {
 	m_shutdown = true;
 
-	if(m_mangerId.joinable())
+	if (m_mangerId.joinable())
 	{
 		std::cout << "Manager thread ID: " << m_mangerId.get_id() << " is exiting" << std::endl;
 		m_mangerId.join();
 	}
 
 	// 等待工作线程退出
-	for (int i = 0; i < m_aliveThreads; ++i) {
-		if (m_threadIds[i]->joinable()) {
+	for (int i = 0; i < m_aliveThreads; ++i)
+	{
+		if (m_threadIds[i]->joinable())
+		{
 			std::cout << "Thread ID " << m_threadIds[i]->get_id() << " is exiting" << std::endl;
 			m_threadIds[i]->join();
 		}
@@ -62,7 +63,6 @@ ThreadPool::~ThreadPool()
 	// 释放任务队列内存
 	delete m_taskQueue;
 	m_taskQueue = nullptr;
-
 }
 
 void ThreadPool::addTask(Task task)
@@ -87,24 +87,70 @@ void ThreadPool::threadExit()
 {
 	auto tid = std::this_thread::get_id();
 
-	auto iter = std::find_if(m_threadIds.begin(), m_threadIds.end(), [&](std::thread* t) {return t->get_id() == tid; });
+	auto iter = std::find_if(m_threadIds.begin(), m_threadIds.end(),
+	                         [&](std::thread* t) { return t->get_id() == tid; });
 
-	if(iter!=m_threadIds.end())
+	if (iter != m_threadIds.end())
 	{
 		delete *iter;
 		*iter = nullptr;
 	}
-
 }
 
-void ThreadPool::worker()
+void ThreadPool::worker(void* arg)
 {
+	auto pool = static_cast<ThreadPool*>(arg);
 
+	while (true)
+	{
+		std::unique_lock<std::mutex> locker(pool->m_mutex);
+
+		//1.当任务队列为空且线程池未关闭时,阻塞工作线程
+		while (pool->m_taskQueue->getTaskCount() == 0 && !pool->m_shutdown)
+		{
+			std::cout << std::format("thread {} is waiting...", std::this_thread::get_id()) << std::endl;
+
+			pool->cond.wait(locker);
+
+			//接触阻塞后判断是否需要销毁线程
+			if (pool->m_exitThreads > 0)
+			{
+				pool->m_exitThreads--;
+				if (pool->m_aliveThreads > pool->m_minThreads)
+				{
+					pool->m_aliveThreads--;
+					std::cout << "Manger kill thread ID: " << std::this_thread::get_id << std::endl;
+					locker.unlock();
+					pool->threadExit();
+					return;
+				}
+			}
+		}
+
+		// 2. 线程池关闭：退出当前工作线程
+		if (pool->m_shutdown)
+		{
+			std::cout << "Thread " << std::this_thread::get_id() << " is shutting down." << std::endl;
+			return;
+		}
+
+		// 3. 从队列中取出任务并执行
+		Task task = pool->m_taskQueue->takeTask();
+		pool->m_busyThreads++;
+		locker.unlock();
+
+		//执行任务
+		std::cout << std::format("thread {} is working.", std::this_thread::get_id()) << std::endl;
+		task();
+
+		//任务完成,更新数量
+		locker.lock();
+		std::cout << std::format("thread {} has finished.", std::this_thread::get_id()) << std::endl;
+		pool->m_busyThreads--;
+		locker.unlock();
+	}
 }
 
 void ThreadPool::manger()
 {
-
 }
-
-
