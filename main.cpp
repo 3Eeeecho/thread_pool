@@ -1,25 +1,27 @@
 #include <iostream>
 #include "TaskQueue.h"
-using namespace std;
+
 int main()
 {
-    TaskQueue tq;
-    cout << "Task number: " << tq.getTaskCount() << endl;
+	TaskQueue tq;
+	std::cout << "Task number: " << tq.getTaskCount() << std::endl;
 
-    // 添加一个lambda表达式作为任务
-    tq.addTask([] { cout << "I'm task1\n"; });
+	// 添加一个lambda表达式作为任务
+	tq.addTask([] { std::cout << "I'm task1\n"; });
 
-    cout << "Task number after adding: " << tq.getTaskCount() << endl;
+	std::cout << "Task number after adding: " << tq.getTaskCount() << std::endl;
 
-    try {
-        Task fun = tq.takeTask();
-        fun(); // 执行任务
-    }
-    catch (const exception& e) {
-        cerr << "Exception occurred: " << e.what() << endl;
-    }
+	try
+	{
+		Task fun = tq.takeTask();
+		fun(); // 执行任务
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Exception occurred: " << e.what() << std::endl;
+	}
 
-    cout << "Task number after consuming: " << tq.getTaskCount() << endl;
+	std::cout << "Task number after consuming: " << tq.getTaskCount() << std::endl;
 
-    return 0;
+	return 0;
 }
