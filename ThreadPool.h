@@ -9,11 +9,11 @@ namespace threadpool
 		ThreadPool(int min, int max);
 		~ThreadPool();
 
-		inline void add_task(taskqueue::Task task);
+		void addTask(taskqueue::Task task);
 
-		inline size_t getBusyThreadNum();
+		size_t getBusyThreadNum();
 
-		inline size_t getAliveThreadNum();
+		size_t getAliveThreadNum();
 
 	private:
 		//工作线程函数
@@ -22,16 +22,16 @@ namespace threadpool
 		void threadExit();
 
 		//取出队列中任务并执行
-		static void worker(void* arg);
+		static void worker(ThreadPool* pool);
 
 		//管理线程
-		static void manger();
+		static void manger(ThreadPool* pool);
 
 		std::mutex m_mutex;
 		std::condition_variable cond;
-		std::vector<std::thread*> m_threadIds;
 		std::thread m_mangerId;
-		taskqueue::TaskQueue* m_taskQueue;
+		std::vector<std::thread*> m_threadIds;
+		std::unique_ptr<taskqueue::TaskQueue> m_taskQueue;
 
 		//线程池参数设置
 		//包括线程池的容量,线程池的情况,是否关闭,管理者每次控制的线程数量
