@@ -1,8 +1,11 @@
 #pragma once
 #include "TaskQueue.h"
 
+
 namespace threadpool
 {
+	inline std::mutex m_outputMutex; // 添加用于保护输出的互斥锁
+
 	class ThreadPool
 	{
 	public:
